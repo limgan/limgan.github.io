@@ -78,7 +78,6 @@ def generate_interpolation_video(_G,_D,Gs, truncation_psi=0.5,
     c.write_videofile(mp4, fps=mp4_fps, codec=mp4_codec, bitrate=mp4_bitrate)
     return c
 
-generate_interpolation_video()
 
 
 def _str_to_bool(v):
