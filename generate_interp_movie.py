@@ -46,7 +46,7 @@ def generate_interpolation_video(_G,_D,Gs, truncation_psi=0.5,
                                  duration_sec=60.0, smoothing_sec=1.0, 
                                  mp4='test-lerp.mp4', mp4_fps=30, 
                                  mp4_codec='libx264', mp4_bitrate='16M', 
-                                 random_seed=1000):
+                                 random_seed=1000,audio=None):
     fmt = dict(func=tflib.convert_images_to_uint8, nchw_to_nhwc=True)
     num_frames = int(np.rint(duration_sec * mp4_fps))
     random_state = np.random.RandomState(random_seed)
@@ -75,6 +75,14 @@ def generate_interpolation_video(_G,_D,Gs, truncation_psi=0.5,
     # Generate video.
     
     c = moviepy.editor.VideoClip(make_frame, duration=duration_sec)
+    
+    if audio != None:
+        audioclip = moviepy.editor.AudioFileClip(audio)
+        audioclip = audioclip.set_duration(duration_sec)
+        new_audioclip = moviepy.editor.CompositeAudioClip([audioclip])
+        c.audio = new_audioclip
+    
+    
     c.write_videofile(mp4, fps=mp4_fps, codec=mp4_codec, bitrate=mp4_bitrate)
     return c
 
@@ -97,15 +105,17 @@ _examples = '''examples:
 
 def _parse_num_range(s):
     '''Accept either a comma separated list of numbers 'a,b,c' or a range 'a-c' and return as a list of ints.'''
-
+    s = str(s)
     range_re = re.compile(r'^(\d+)-(\d+)$')
     m = range_re.match(s)
     if m:
         return list(range(int(m.group(1)), int(m.group(2))+1))
+    
+    s = s.replace(']','').replace('[','')
     vals = s.split(',')
     return [int(x) for x in vals]
 
-def generate_interp(network_pkl, seed, truncation_psi, outdir, duration=60.0, smoothing= 1.0, name='interp', fps =30):
+def generate_interp(network_pkl, seeds, truncation_psi, outdir, duration=60.0, smoothing= 1.0, name='interp', fps =30, audio=None):
     
     tflib.init_tf()
     print('Loading networks from "%s"...' % network_pkl)
@@ -114,18 +124,18 @@ def generate_interp(network_pkl, seed, truncation_psi, outdir, duration=60.0, sm
 
     os.makedirs(outdir, exist_ok=True)
     
-    seeds = _parse_num_range(seed)
+    
     
     
     
     
     for seed in seeds:
-        tmpname = (outdir + name + '_' + seed + '.mp4')
-        generate_interpolation_video(_G,_D,Gs,       truncation_pis=truncation_psi, grid_size=[1,1],   
-                                     duration_sec=duration, smoothing_sec=smoothing, 
-                                     mp4=tmpname, mp4_fps=fps, 
+        tmpname = (outdir + name + '_' + str(seed) + '.mp4')
+        generate_interpolation_video(_G,_D,Gs,       truncation_psi=truncation_psi, grid_size=[1,1],   
+                                     duration_sec=float(duration), smoothing_sec=float(smoothing), 
+                                     mp4=tmpname, mp4_fps=int(fps), 
                                      mp4_codec='libx264', mp4_bitrate='16M', 
-                                     random_seed=seed)
+                                     random_seed=seed, audio = audio)
     return 1
     
 
@@ -148,6 +158,7 @@ def main():
     parser.add_argument('--duration', help='how long to generate interpolation for')
     parser.add_argument('--name', help='name of the mp4 file')
     parser.add_argument('--fps', help='fps of the mp4!')
+    parser.add_argument('--audio', help='audio file if wanted')
     
     
     generate_interp(**vars(parser.parse_args()))
